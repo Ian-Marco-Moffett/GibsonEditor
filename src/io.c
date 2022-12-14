@@ -49,9 +49,6 @@ static void nm_handle_keystroke(char c)
 
   switch (c)
   {
-    case 'q':
-      exit(1);
-      break;
     case 'i':
       clear_status_line();
       write_status_line("Insert mode");
@@ -84,6 +81,10 @@ static void nm_handle_keystroke(char c)
         g_context.cursor_y -= 1;
         update_cursor();
       }
+      break;
+    case CTRL_KEY('q'):
+      exit(0);
+      break;
   }
 }
 
@@ -123,7 +124,7 @@ void handle_keystroke(char c)
   {
     nm_handle_keystroke(c);
     return;
-  }
+  } 
 
   if (!(iscntrl(c))) 
   {
@@ -149,4 +150,10 @@ void handle_keystroke(char c)
     write_status_line("Normal mode");
     g_context.state &= ~(STATE_INSERT_MODE);
   }
+  else if (c == CC_ENTER)
+  {
+    g_context.cursor_x = 1;
+    g_context.cursor_y += 1;
+    update_cursor();
+  } 
 }
