@@ -1,4 +1,4 @@
-CFLAGS=-std=c99 -Wall -Wextra -pedantic -ggdb
+CFLAGS=-std=c99 -Wall -Wextra -pedantic -ggdb -Iinclude/
 CFILES=$(shell find src/ -name "*.c")
 TARGET=bin/gibson
 
