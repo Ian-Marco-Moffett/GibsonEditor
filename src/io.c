@@ -20,7 +20,7 @@ static void move_cursor(size_t x, size_t y)
 }
 
 
-static inline void get_win_size(size_t* width, size_t* height)
+static inline void get_win_size(size_t *width, size_t *height)
 {
   struct winsize w;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
