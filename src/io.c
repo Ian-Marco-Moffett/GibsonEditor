@@ -61,7 +61,7 @@ static inline void update_cursor(void)
 
 static void init(void)
 {
-  LINE* newline = malloc(sizeof(LINE));
+  LINE *newline = malloc(sizeof(LINE));
   VECTOR_PUSH(&g_context.lines, newline);
   g_context.is_init = 1;
 }
