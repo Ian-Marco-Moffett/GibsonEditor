@@ -20,6 +20,7 @@ static void move_cursor(size_t x, size_t y)
 }
 
 
+
 static inline void get_win_size(size_t *width, size_t *height)
 {
   struct winsize w;
@@ -28,11 +29,53 @@ static inline void get_win_size(size_t *width, size_t *height)
   *width = w.ws_col;
 }
 
+
+static void push_char(char c)
+{
+  // Write the character to
+  // the screen and increase
+  // cursor xpos.
+  write(STDOUT_FILENO, &c, 1);
+  g_context.cursor_x += 1;
+  
+  // If the text goes too far
+  // to the right, make a newline.
+  size_t width, height;
+  get_win_size(&width, &height);
+  if (g_context.cursor_x > width - 2) 
+  {
+    g_context.cursor_x = 1;
+    g_context.cursor_y += 1;
+  }
+
+  LINE *line = VECTOR_TOP(g_context.lines);
+  VECTOR_PUSH(&line->chars, c);
+}
+
+
 static inline void update_cursor(void) 
 {
   move_cursor(g_context.cursor_x, g_context.cursor_y);
 }
 
+
+static void init(void)
+{
+  LINE* newline = malloc(sizeof(LINE));
+  VECTOR_PUSH(&g_context.lines, newline);
+  g_context.is_init = 1;
+}
+
+
+static void newline(void)
+{
+  g_context.cursor_x = 1;
+  g_context.cursor_y += 1;
+  update_cursor();
+
+  LINE* newline = malloc(sizeof(LINE));
+  VECTOR_PUSH(&g_context.lines, newline);
+}
 
 /* 
  * 
@@ -118,8 +161,26 @@ void clear_status_line(void)
   move_cursor(g_context.cursor_x, g_context.cursor_y);
 }
 
+// Cleans up.
+void cleanup(void) 
+{
+  while (!(VECTOR_IS_EMPTY(g_context.lines)))
+  {
+    LINE *line = NULL;
+    VECTOR_POP(&g_context.lines, &line);
+    VECTOR_DESTROY(&line->chars);
+    free(line);
+  }
+}
+
 void handle_keystroke(char c)
 {
+
+  if (!(g_context.is_init))
+  {
+    init();
+  }
+
   if (!(g_context.state & STATE_INSERT_MODE)) 
   {
     nm_handle_keystroke(c);
@@ -127,22 +188,8 @@ void handle_keystroke(char c)
   } 
 
   if (!(iscntrl(c))) 
-  {
-    // Write the character to
-    // the screen and increase
-    // cursor xpos.
-    write(STDOUT_FILENO, &c, 1);
-    g_context.cursor_x += 1;
-  
-    // If the text goes too far
-    // to the right, make a newline.
-    size_t width, height;
-    get_win_size(&width, &height);
-    if (g_context.cursor_x > width - 2) 
-    {
-      g_context.cursor_x = 1;
-      g_context.cursor_y += 1;
-    }
+  { 
+    push_char(c);
   }
   else if (c == CC_ESC)
   {
@@ -152,8 +199,6 @@ void handle_keystroke(char c)
   }
   else if (c == CC_ENTER)
   {
-    g_context.cursor_x = 1;
-    g_context.cursor_y += 1;
-    update_cursor();
+    newline();
   } 
 }

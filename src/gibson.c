@@ -5,10 +5,14 @@
 #include <gibson.h>
 
 static struct termios old_term_state;
-EDITOR_CONTEXT g_context = {0};
+EDITOR_CONTEXT g_context = {
+  .lines = VECTOR_INIT,
+  .is_init = 0
+};
 
 static void exit_callback(void)
 {
+  cleanup();
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_term_state);
   // Flush STDOUT to prevent issues on some prompts/terminal emulators.
   write(STDOUT_FILENO, "\n", 1);
@@ -50,7 +54,7 @@ int main(int argc, char **argv)
     clear_screen();
     g_context.cursor_x = 1;
     g_context.cursor_y = 1;
-
+    
     write_status_line("Normal mode\n");
 
     run();
