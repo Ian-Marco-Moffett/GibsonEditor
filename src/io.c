@@ -25,6 +25,15 @@ static inline void get_win_size(size_t *width, size_t *height)
   *width = w.ws_col;
 }
 
+static LINE *get_line(void)
+{
+  LINE *ln = NULL;
+
+  // FIXME (could cause issues).
+  VECTOR_READ_AT(&g_context.lines, &ln, g_context.cursor_y-1);
+  return ln;
+}
+
 static void newline(uint8_t update_lines)
 {
   push_char('\0', 0);
@@ -46,6 +55,26 @@ static void newline(uint8_t update_lines)
   g_context.cursor_x = DEFAULT_CURSOR_POSX;
   update_cursor();
 }
+
+
+static void backspace(void)
+{
+  size_t real_cursor_x = g_context.cursor_x - DEFAULT_CURSOR_POSX;
+  LINE *current_line = get_line();
+
+  volatile char unused;
+  if (real_cursor_x > 0)
+  {
+    --g_context.cursor_x;
+    update_cursor();
+    write(STDOUT_FILENO, " ", 1);
+    update_cursor();
+    
+    // Pop from the buffer.
+    VECTOR_POP_AT(&current_line->chars, (char*)&unused, real_cursor_x);
+  }
+}
+
 
 static void push_char(char c, uint8_t do_move_cursor)
 {
@@ -71,7 +100,7 @@ static void push_char(char c, uint8_t do_move_cursor)
     newline(0);
   }
 
-  LINE *line = VECTOR_TOP(g_context.lines);
+  LINE *line = get_line();
   VECTOR_PUSH(&line->chars, c);
 }
 
@@ -107,15 +136,6 @@ static void write_file(void)
 
   fclose(g_context.fp);
   g_context.is_buffer_changed = 0;
-}
-
-static LINE *get_line(void)
-{
-  LINE *ln = NULL;
-
-  // FIXME (could cause issues).
-  VECTOR_READ_AT(&g_context.lines, &ln, g_context.cursor_y-1);
-  return ln;
 }
 
 /* Moves cursor right */
@@ -335,5 +355,8 @@ void handle_keystroke(char c)
   else if (c == CC_ENTER)
   {
     newline(1);
-  } 
+  } else if (c == CC_BACKSPACE)
+  {
+    backspace();
+  }
 }
