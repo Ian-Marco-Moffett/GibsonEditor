@@ -355,7 +355,8 @@ void handle_keystroke(char c)
   else if (c == CC_ENTER)
   {
     newline(1);
-  } else if (c == CC_BACKSPACE)
+  } 
+  else if (c == CC_BACKSPACE)
   {
     backspace();
   }
