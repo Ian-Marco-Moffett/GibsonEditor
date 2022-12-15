@@ -112,7 +112,10 @@ static void write_file(void)
 /* Moves cursor right */
 static void cursor_move_right(void) 
 {
-  LINE *line = VECTOR_TOP(g_context.lines);
+  LINE *line = NULL;
+
+  // FIXME (could cause issues).
+  VECTOR_READ_AT(&g_context.lines, &line, g_context.cursor_y-1);
   
   /*
    *  By real_cursor_x I don't mean the 
