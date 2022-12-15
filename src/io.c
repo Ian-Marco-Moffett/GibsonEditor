@@ -96,7 +96,7 @@ static void write_file(void)
   size_t lines = VECTOR_ELEMENT_COUNT(g_context.lines);
   for (size_t i = 0; i < lines; ++i) 
   {
-    LINE* ln = NULL;
+    LINE *ln = NULL;
     VECTOR_READ_AT(&g_context.lines, &ln, i);
     fputs(ln->chars.elements, g_context.fp);
 
