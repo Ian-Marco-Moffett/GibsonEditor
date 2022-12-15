@@ -109,6 +109,55 @@ static void write_file(void)
   g_context.is_buffer_changed = 0;
 }
 
+/* Moves cursor right */
+static void cursor_move_right(void) 
+{
+  LINE *line = VECTOR_TOP(g_context.lines);
+  
+  /*
+   *  By real_cursor_x I don't mean the 
+   *  offset from 1 to n, I mean the offset
+   *  from DEFAULT_CURSOR_POSX to n.
+   *
+   */
+
+  size_t real_cursor_x = g_context.cursor_x - DEFAULT_CURSOR_POSX;
+  if (real_cursor_x < VECTOR_ELEMENT_COUNT(line->chars)) 
+  {
+    g_context.cursor_x += 1;
+    update_cursor();
+  }
+}
+
+
+static void cursor_move_left(void)
+{
+  // See the comment in cursor_move_right()
+  size_t real_cursor_x = g_context.cursor_x - DEFAULT_CURSOR_POSX;
+  if (real_cursor_x > 0) 
+  {
+    g_context.cursor_x -= 1;
+    update_cursor();
+  }
+}
+
+
+static void cursor_move_up(void) 
+{
+  if (g_context.cursor_y > 1) 
+  {
+    g_context.cursor_y -= 1;
+    update_cursor();
+  }
+}
+
+
+static void cursor_move_down(void) {
+  if (g_context.cursor_y < VECTOR_ELEMENT_COUNT(g_context.lines)) {
+    g_context.cursor_y += 1;
+    update_cursor();
+  }
+}
 
 /* 
  * 
@@ -136,32 +185,16 @@ static void nm_handle_keystroke(char c)
       g_context.state |= STATE_INSERT_MODE;
       break;
     case 'l':
-      if (g_context.cursor_x < width - 1)
-      {
-        g_context.cursor_x += 1;
-        update_cursor();
-      }
+      cursor_move_right(); 
       break;
     case 'h':
-      if (g_context.cursor_x > 1) 
-      {
-        g_context.cursor_x -= 1;
-        update_cursor();
-      }
+      cursor_move_left();
       break;
     case 'j':
-      if (g_context.cursor_y < height - 3)
-      {
-        g_context.cursor_y += 1;
-        update_cursor();
-      }
+      cursor_move_down();
       break;
-    case 'k':
-      if (g_context.cursor_y > 1) 
-      {
-        g_context.cursor_y -= 1;
-        update_cursor();
-      }
+    case 'k': 
+      cursor_move_up();
       break;
     case CTRL_KEY('q'):
       if (g_context.is_buffer_changed && !(g_context.quit_requested)) 
