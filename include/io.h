@@ -1,7 +1,10 @@
 #ifndef IO_H_
 #define IO_H_
 
+#define  _POSIX_C_SOURCE 200809L
+
 #include <stddef.h>
+#include <stdio.h>
 
 #define DEFAULT_CURSOR_POSX 8
 #define DEFAULT_CURSOR_POSY 1
@@ -20,5 +23,6 @@ void write_status_line(const char* fmt, ...);
 void clear_status_line(void);
 void move_cursor(size_t x, size_t y);
 void clear_screen(void);
+void read_in_file(FILE* fp);
 
 #endif

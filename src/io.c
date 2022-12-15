@@ -391,6 +391,33 @@ void move_cursor(size_t x, size_t y) {
   write(STDOUT_FILENO, str, strlen(str));
 }
 
+void read_in_file(FILE* fp) 
+{
+  if (!(g_context.is_init))
+  {
+    init();
+  }
+
+  char* line = NULL;
+  size_t len = 0;
+  while (getline(&line, &len, fp) != -1)
+  {
+    for (size_t i = 0; i < strlen(line); ++i)
+    {
+      if (line[i] == '\n')
+      {
+        newline(1);
+      }
+      else
+      {
+        push_char(line[i], 0);
+      }
+    }
+  }
+
+  free(line);
+}
+
 void handle_keystroke(char c)
 {
 

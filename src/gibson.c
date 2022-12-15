@@ -37,6 +37,13 @@ static void init_term(void)
 
 static void run(void) 
 {
+  if (access(g_context.editing_fname, F_OK) == 0)
+  {
+    FILE* fp = fopen(g_context.editing_fname, "r");
+    read_in_file(fp);
+    fclose(fp);
+  }
+
   char c;
   while (read(STDIN_FILENO, &c, 1)) 
   {
@@ -50,12 +57,6 @@ int main(int argc, char **argv)
   if (argc < 2) 
   {
     printf("Error: Too few arguments!\n");
-    return 1;
-  }
-
-  if (access(argv[1], F_OK) == 0) 
-  {
-    printf("Error: Existing files not supported yet\n");
     return 1;
   }
 
