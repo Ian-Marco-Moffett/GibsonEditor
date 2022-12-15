@@ -73,6 +73,28 @@ static void backspace(void)
     // Pop from the buffer.
     VECTOR_POP_AT(&current_line->chars, (char*)&unused, real_cursor_x);
   }
+  else if (real_cursor_x == 0 && g_context.cursor_y > 1)
+  { 
+    // Clear the current line.
+    move_cursor(0, g_context.cursor_y);
+    write(STDOUT_FILENO, ANSI_CLEAR_LINE, strlen(ANSI_CLEAR_LINE));
+
+    // Pop and destroy the old line.
+    LINE *old_line;
+    VECTOR_POP(&g_context.lines, &old_line);
+    VECTOR_DESTROY(&old_line->chars);
+    free(old_line);
+
+    // Go up.
+    --g_context.cursor_y;
+
+    // Move to end of line.
+    LINE *ln = get_line(); 
+    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars));
+
+    // Update cursor.
+    update_cursor();
+  }
 }
 
 
@@ -179,7 +201,7 @@ static void cursor_move_up(void)
     update_cursor();
 
     LINE *ln = get_line();
-    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars)-1);
+    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars)-1);     // Moves to the end of the line.
     update_cursor();
   }
 }
@@ -191,7 +213,7 @@ static void cursor_move_down(void) {
     update_cursor();
 
     LINE *ln = get_line();
-    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars));
+    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars));     // Moves to the end of the line.
     update_cursor();
   }
 }
