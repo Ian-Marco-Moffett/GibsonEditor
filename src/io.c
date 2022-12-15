@@ -43,7 +43,7 @@ static void newline(uint8_t update_lines)
   
   // Move the cursor away from the
   // line number.
-  g_context.cursor_x = 1+strlen(linenum_buf);
+  g_context.cursor_x = DEFAULT_CURSOR_POSX;
   update_cursor();
 }
 

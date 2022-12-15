@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#define DEFAULT_CURSOR_POSX 5
+#define DEFAULT_CURSOR_POSX 8
 #define DEFAULT_CURSOR_POSY 1
 
 // Status numbers
