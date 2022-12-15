@@ -17,6 +17,7 @@
 
 #define VECTOR_TOP(vec_val) vec_val.elements[vec_val.len - 1]
 #define VECTOR_IS_EMPTY(vec_val) vec_val.len == 0
+#define VECTOR_ELEMENT_COUNT(vec_val) vec_val.len
 
 #define VECTOR_PUSH(vector_ptr, element) do {                                        \
     __auto_type vec = vector_ptr;                                                    \

@@ -6,19 +6,15 @@
 #include <console.h>
 #include <gibson.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <sys/ioctl.h>
 
 #define ANSI_ESC_MOVE_UP "\033[10000A"
 #define ANSI_CLEAR_LINE "\033[K"
 #define BAR_COLOR "\033[37m"
 
-static void move_cursor(size_t x, size_t y)
-{
-  char str[50];
-  snprintf(str, sizeof(str), "\033[%ld;%ldH", y, x);
-  write(STDOUT_FILENO, str, strlen(str));
-}
-
+static void push_char(char c, uint8_t do_move_cursor);
+static inline void update_cursor(void);
 
 
 static inline void get_win_size(size_t *width, size_t *height)
@@ -29,14 +25,42 @@ static inline void get_win_size(size_t *width, size_t *height)
   *width = w.ws_col;
 }
 
-
-static void push_char(char c)
+static void newline(uint8_t update_lines)
 {
+  push_char('\0', 0);
+  g_context.cursor_y += 1;
+  
+  if (update_lines)
+  {
+    LINE* newline = malloc(sizeof(LINE));
+    VECTOR_PUSH(&g_context.lines, newline);
+  }
+  
+  // Write the line number.
+  char linenum_buf[20];
+  snprintf(linenum_buf, sizeof(linenum_buf), "\n%ld~ ", VECTOR_ELEMENT_COUNT(g_context.lines));
+  write(STDOUT_FILENO, linenum_buf, strlen(linenum_buf));
+  
+  // Move the cursor away from the
+  // line number.
+  g_context.cursor_x = 1+strlen(linenum_buf);
+  update_cursor();
+}
+
+static void push_char(char c, uint8_t do_move_cursor)
+{
+  // Mark buffer as changed.
+  g_context.is_buffer_changed = 1;
+
   // Write the character to
   // the screen and increase
   // cursor xpos.
   write(STDOUT_FILENO, &c, 1);
-  g_context.cursor_x += 1;
+
+  if (do_move_cursor) 
+  {
+    g_context.cursor_x += 1;
+  }
   
   // If the text goes too far
   // to the right, make a newline.
@@ -44,14 +68,12 @@ static void push_char(char c)
   get_win_size(&width, &height);
   if (g_context.cursor_x > width - 2) 
   {
-    g_context.cursor_x = 1;
-    g_context.cursor_y += 1;
+    newline(0);
   }
 
   LINE *line = VECTOR_TOP(g_context.lines);
   VECTOR_PUSH(&line->chars, c);
 }
-
 
 static inline void update_cursor(void) 
 {
@@ -61,21 +83,32 @@ static inline void update_cursor(void)
 
 static void init(void)
 {
+  move_cursor(g_context.cursor_x, g_context.cursor_y);
   LINE *newline = malloc(sizeof(LINE));
   VECTOR_PUSH(&g_context.lines, newline);
   g_context.is_init = 1;
 }
 
-
-static void newline(void)
+static void write_file(void)
 {
-  g_context.cursor_x = 1;
-  g_context.cursor_y += 1;
-  update_cursor();
 
-  LINE* newline = malloc(sizeof(LINE));
-  VECTOR_PUSH(&g_context.lines, newline);
+  g_context.fp = fopen(g_context.editing_fname, "w");
+  size_t lines = VECTOR_ELEMENT_COUNT(g_context.lines);
+  for (size_t i = 0; i < lines; ++i) 
+  {
+    LINE* ln = NULL;
+    VECTOR_READ_AT(&g_context.lines, &ln, i);
+    fputs(ln->chars.elements, g_context.fp);
+
+    if (i < lines-1) {
+      fputs("\n", g_context.fp);
+    }
+  }
+
+  fclose(g_context.fp);
+  g_context.is_buffer_changed = 0;
 }
+
 
 /* 
  * 
@@ -89,12 +122,17 @@ static void nm_handle_keystroke(char c)
 {
   size_t height, width;
   get_win_size(&width, &height);
+  
+  // Cancel changes it quit was requested and another key was pressed.
+  if (c != CTRL_KEY('q') && g_context.quit_requested)
+  {
+    g_context.quit_requested = 0;
+  }
 
   switch (c)
   {
     case 'i':
-      clear_status_line();
-      write_status_line("Insert mode");
+      set_default_status(SN_INSERT_MODE);
       g_context.state |= STATE_INSERT_MODE;
       break;
     case 'l':
@@ -126,7 +164,23 @@ static void nm_handle_keystroke(char c)
       }
       break;
     case CTRL_KEY('q'):
-      exit(0);
+      if (g_context.is_buffer_changed && !(g_context.quit_requested)) 
+      {
+        write_status_line("Changes at risk! Press CTRL+Q again to quit, or any other key to cancel.\n");
+        g_context.quit_requested = 1;
+        break;
+      }
+
+      exit(1);
+      break;
+    case CTRL_KEY('w'):
+      // Write \n\0 to the file.
+      push_char('\n', 0);
+      push_char('\0', 0);
+
+      // Update the status line and file on disk.
+      write_status_line("Wrote %ld line(s) to %s\n", VECTOR_ELEMENT_COUNT(g_context.lines), g_context.editing_fname);
+      write_file();
       break;
   }
 }
@@ -139,15 +193,25 @@ void clear_screen(void)
 }
 
 
-void write_status_line(const char* str) 
+void write_status_line(const char* fmt, ...) 
 {
+  char buf[300];
+
+  va_list ap;
+  va_start(ap, fmt);
+
+  // Write to buf.
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+
   size_t width, height;
   get_win_size(&width, &height);
-
+ 
   move_cursor(0, height-1);
   write(STDOUT_FILENO, BAR_COLOR, strlen(BAR_COLOR));
-  write(STDOUT_FILENO, str, strlen(str));
+  write(STDOUT_FILENO, buf, strlen(buf));
   move_cursor(g_context.cursor_x, g_context.cursor_y);
+
+  va_end(ap);
 }
 
 
@@ -158,7 +222,7 @@ void clear_status_line(void)
 
   move_cursor(0, height-1);
   write(STDOUT_FILENO, ANSI_CLEAR_LINE, strlen(ANSI_CLEAR_LINE));
-  move_cursor(g_context.cursor_x, g_context.cursor_y);
+  move_cursor(g_context.cursor_x, g_context.cursor_y); 
 }
 
 // Cleans up.
@@ -171,6 +235,27 @@ void cleanup(void)
     VECTOR_DESTROY(&line->chars);
     free(line);
   }
+}
+
+void set_default_status(STATUS_NUMBER status_number)
+{
+  switch (status_number)
+  {
+    case SN_NORMAL_MODE: 
+      clear_status_line();
+      write_status_line("Normal mode - %s\n", g_context.editing_fname);
+      break;
+    case SN_INSERT_MODE:
+      clear_status_line();
+      write_status_line("Insert mode - %s\n", g_context.editing_fname);
+      break;
+  }
+}
+
+void move_cursor(size_t x, size_t y) {
+  char str[50];
+  snprintf(str, sizeof(str), "\033[%ld;%ldH", y, x);
+  write(STDOUT_FILENO, str, strlen(str));
 }
 
 void handle_keystroke(char c)
@@ -189,16 +274,16 @@ void handle_keystroke(char c)
 
   if (!(iscntrl(c))) 
   { 
-    push_char(c);
+    push_char(c, 1);
   }
   else if (c == CC_ESC)
   {
     clear_status_line();
-    write_status_line("Normal mode");
+    set_default_status(SN_NORMAL_MODE);
     g_context.state &= ~(STATE_INSERT_MODE);
   }
   else if (c == CC_ENTER)
   {
-    newline();
+    newline(1);
   } 
 }

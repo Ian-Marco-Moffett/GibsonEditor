@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <io.h>
 #include <gibson.h>
+#include <string.h>
+
 
 static struct termios old_term_state;
 EDITOR_CONTEXT g_context = {
@@ -45,18 +47,38 @@ static void run(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc; // TEMP: Fix compiler warning about unused variables
-    (void)argv; // TEMP: Fix compiler warning about unused variables
-    
-    atexit(exit_callback);
-    init_term();
-  
-    clear_screen();
-    g_context.cursor_x = 1;
-    g_context.cursor_y = 1;
-    
-    write_status_line("Normal mode\n");
+  if (argc < 2) 
+  {
+    printf("Error: Too few arguments!\n");
+    return 1;
+  }
 
-    run();
-    return 0;
+  if (access(argv[1], F_OK) == 0) 
+  {
+    printf("Error: Existing files not supported yet\n");
+    return 1;
+  }
+
+  atexit(exit_callback);
+  init_term();
+  
+  clear_screen();
+  g_context.cursor_x = DEFAULT_CURSOR_POSX;
+  g_context.cursor_y = DEFAULT_CURSOR_POSY;
+  g_context.editing_fname = argv[1];
+  
+  // Set to normal mode.
+  set_default_status(SN_NORMAL_MODE);
+
+  // Move cursor back to 1,1.
+  move_cursor(1, 1);
+
+  // Write the first line number.
+  write(STDOUT_FILENO, "1~ ", 3);     // First line.
+
+  // Move the cursor to the default position.
+  move_cursor(DEFAULT_CURSOR_POSX, 1);
+
+  run();
+  return 0;
 }
