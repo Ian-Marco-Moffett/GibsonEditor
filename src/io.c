@@ -70,7 +70,7 @@ static void refresh_line(void)
 
   // Write the line number.
   char linenum_buf[20];
-  snprintf(linenum_buf, sizeof(linenum_buf), "%ld~", VECTOR_ELEMENT_COUNT(g_context.lines));
+  snprintf(linenum_buf, sizeof(linenum_buf), "%ld~", g_context.cursor_y);
   write(STDOUT_FILENO, linenum_buf, strlen(linenum_buf));
   
   // - 1 because xpos - 1 is the position before the character
@@ -230,12 +230,17 @@ static void cursor_move_up(void)
 {
   if (g_context.cursor_y > 1) 
   {
+    // Ensure there is a \n\0
+    push_char('\n', 1);
+    push_char('\0', 1);
+
+    // Move up.
     g_context.cursor_y -= 1;
     update_cursor();
 
     LINE *ln = get_line();
     g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars)-1);     // Moves to the end of the line.
-    update_cursor();
+    refresh_line();
   }
 }
 
