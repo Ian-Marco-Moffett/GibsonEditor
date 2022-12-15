@@ -109,13 +109,19 @@ static void write_file(void)
   g_context.is_buffer_changed = 0;
 }
 
+static LINE *get_line(void)
+{
+  LINE *ln = NULL;
+
+  // FIXME (could cause issues).
+  VECTOR_READ_AT(&g_context.lines, &ln, g_context.cursor_y-1);
+  return ln;
+}
+
 /* Moves cursor right */
 static void cursor_move_right(void) 
 {
-  LINE *line = NULL;
-
-  // FIXME (could cause issues).
-  VECTOR_READ_AT(&g_context.lines, &line, g_context.cursor_y-1);
+  LINE *line = get_line();
   
   /*
    *  By real_cursor_x I don't mean the 
@@ -151,6 +157,10 @@ static void cursor_move_up(void)
   {
     g_context.cursor_y -= 1;
     update_cursor();
+
+    LINE *ln = get_line();
+    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars)-1);
+    update_cursor();
   }
 }
 
@@ -158,6 +168,10 @@ static void cursor_move_up(void)
 static void cursor_move_down(void) {
   if (g_context.cursor_y < VECTOR_ELEMENT_COUNT(g_context.lines)) {
     g_context.cursor_y += 1;
+    update_cursor();
+
+    LINE *ln = get_line();
+    g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars));
     update_cursor();
   }
 }
