@@ -57,6 +57,38 @@ static void newline(uint8_t update_lines)
 }
 
 
+static void clear_line(void)
+{
+  move_cursor(0, g_context.cursor_y);
+  write(STDOUT_FILENO, ANSI_CLEAR_LINE, strlen(ANSI_CLEAR_LINE));
+}
+
+static void refresh_line(void)
+{
+  clear_line();
+  LINE *ln = get_line();
+
+  // Write the line number.
+  char linenum_buf[20];
+  snprintf(linenum_buf, sizeof(linenum_buf), "%ld~", VECTOR_ELEMENT_COUNT(g_context.lines));
+  write(STDOUT_FILENO, linenum_buf, strlen(linenum_buf));
+  
+  // - 1 because xpos - 1 is the position before the character
+  // we are erasing.
+  //
+  // Not doing this will cause this specific line buffer
+  // to "float" kinda to the right.
+  move_cursor(DEFAULT_CURSOR_POSX, g_context.cursor_y);
+
+  // Redraw the text on this one line.
+  for (size_t i = 0; i < VECTOR_ELEMENT_COUNT(ln->chars); ++i) {
+    write(STDOUT_FILENO, &ln->chars.elements[i], 1);
+  }
+ 
+  update_cursor();
+}
+
+
 static void backspace(void)
 {
   size_t real_cursor_x = g_context.cursor_x - DEFAULT_CURSOR_POSX;
@@ -71,13 +103,14 @@ static void backspace(void)
     update_cursor();
     
     // Pop from the buffer.
-    VECTOR_POP_AT(&current_line->chars, (char*)&unused, real_cursor_x);
+    VECTOR_POP_AT(&current_line->chars, (char*)&unused, real_cursor_x - 1);
+
+    refresh_line();
   }
   else if (real_cursor_x == 0 && g_context.cursor_y > 1)
   { 
-    // Clear the current line.
-    move_cursor(0, g_context.cursor_y);
-    write(STDOUT_FILENO, ANSI_CLEAR_LINE, strlen(ANSI_CLEAR_LINE));
+    // Clear the current line. 
+    clear_line();
 
     // Pop and destroy the old line.
     LINE *old_line;
