@@ -241,6 +241,10 @@ static void cursor_move_up(void)
     LINE *ln = get_line();
     g_context.cursor_x = DEFAULT_CURSOR_POSX+(VECTOR_ELEMENT_COUNT(ln->chars)-1);     // Moves to the end of the line.
     refresh_line();
+  
+    volatile char unused;
+    LINE *l = get_line();
+    VECTOR_POP(&l->chars, &unused);
   }
 }
 
@@ -305,7 +309,6 @@ static void nm_handle_keystroke(char c)
       break;
     case CTRL_KEY('w'):
       // Write \n\0 to the file.
-      push_char('\n', 0);
       push_char('\0', 0);
 
       // Update the status line and file on disk.
